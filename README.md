@@ -19,3 +19,7 @@ Project is created with:
 Open your MacOS Terminal.
 CD to your folder with the python script.
 Run the script with: python3 main.py 
+
+
+## INFO
+Do not change the name of the PDF-Files, just download it.
