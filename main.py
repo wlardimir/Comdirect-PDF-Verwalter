@@ -1,5 +1,5 @@
 import os
-#import macos_tags
+import macos_tags
 import sys
 import shutil
 import time
@@ -10,39 +10,50 @@ from glob import glob
 from pathlib import Path
 from PyPDF2 import PdfFileReader
 
-#=== Vars ===
+# === Vars ===
 
 comdirect = "Comdirect"
-listignore = ["Finanzreport", "Kosteninformation"]
-jahressteuerbescheinigung = ["Jahressteuerbescheinigung"]
+ignore_list = ["Finanzreport", "Kosteninformation"]
+annual_tax_certificate = ["Jahressteuerbescheinigung"]
 
-listyears = []
-listofyears = []
+years_list = []
+date_list = []
 
-#=== Defs ===
+# === Defs ===
 
-def file_end_with_pdf(dr, ext):
-    return glob(path.join(dr,"*.{}".format(ext)))
-
-def set_create_date(listpdf, listignore):
-    listpdf = [pdfItem for pdfItem in listpdf if not any(ignoreItem in pdfItem for ignoreItem in listignore)]
+def comdirect_tags_macos(pdf_item_list):
     pdfcounter = 0
 
-    while pdfcounter < len(listpdf):
-        day = int(listpdf[pdfcounter][-20:-18])
-        month = int(listpdf[pdfcounter][-17:-15])
-        year = int(listpdf[pdfcounter][-14:-10])
+    while pdfcounter < len(pdf_item_list):
+        macos_tags.add(comdirect, file=pdf_item_list[pdfcounter])
+        pdfcounter += 1
+
+def file_end_with_pdf(dr, ext):
+    return glob(path.join(dr, "*.{}".format(ext)))
+
+
+def set_create_date(pdf_list, ignore_list):
+    pdf_list = [pdfItem for pdfItem in pdf_list if not any(
+        ignoreItem in pdfItem for ignoreItem in ignore_list)]
+    pdfcounter = 0
+
+    while pdfcounter < len(pdf_list):
+        day = int(pdf_list[pdfcounter][-20:-18])
+        month = int(pdf_list[pdfcounter][-17:-15])
+        year = int(pdf_list[pdfcounter][-14:-10])
 
         date = datetime.datetime(year=year, month=month, day=day)
         modTime = time.mktime(date.timetuple())
 
-        os.utime(listpdf[pdfcounter], (modTime, modTime))
+        os.utime(pdf_list[pdfcounter], (modTime, modTime))
 
         pdfcounter += 1
+
 
 def remove_with_no_Licensee(listpdf, listignore):
     pdf = [pdfItem for pdfItem in listpdf if not any(ignoreItem in pdfItem for ignoreItem in listignore)]
     return pdf
+
 
 def remove_duplicates(listofElements):
     uniqueList = []
@@ -51,41 +62,44 @@ def remove_duplicates(listofElements):
             uniqueList.append(elem)
     return uniqueList
 
-def generate_pdf_years(listpdf):
-    listyear = []
+
+def generate_pdf_years(pdf_list):
+    year_list = []
     pdfcounter = 0
 
-    while pdfcounter < len(listpdf):
-        reader = PdfFileReader(listpdf[pdfcounter])
+    while pdfcounter < len(pdf_list):
+        reader = PdfFileReader(pdf_list[pdfcounter])
         metadata = reader.getDocumentInfo()
         licensee = metadata['/Licensee']
 
         if comdirect in licensee:
-            #macos_tags.add(comdirect, file=listpdf[pdfcounter])
-            years = listpdf[pdfcounter][-14:-10]
-            listyear.append(years)
-            listyear = remove_duplicates(listyear)
+            macos_tags.add(comdirect, file=pdf_list[pdfcounter])
+            years = pdf_list[pdfcounter][-14:-10]
+            year_list.append(years)
+            year_list = remove_duplicates(year_list)
 
         pdfcounter += 1
 
-    return listyear
+    return year_list
 
-def return_date(listpdf, listofyears):
+
+def return_date(pdf_list, date_list):
     x = 0
-    while x < len(listpdf):
-        years = listpdf[x][-14:-10]
-        listofyears.append(years)
+    while x < len(pdf_list):
+        years = pdf_list[x][-14:-10]
+        date_list.append(years)
         x += 1
 
-    return listofyears
+    return date_list
 
-def put_in_folder(listpdf, listyear):
+
+def put_in_folder(pdf_list, year_list):
     pdfcounter = 0
-    while pdfcounter < len(listpdf):
-        for listYearItem in listyear:
-            if listYearItem in listpdf[pdfcounter]:
-                Path(listYearItem).mkdir(parents=True, exist_ok=True)
-                shutil.move(listpdf[pdfcounter], listYearItem)
+    while pdfcounter < len(pdf_list):
+        for year_listItem in year_list:
+            if year_listItem in pdf_list[pdfcounter]:
+                Path(year_listItem).mkdir(parents=True, exist_ok=True)
+                shutil.move(pdf_list[pdfcounter], year_listItem)
                 pdfcounter += 1
 
             else:
@@ -93,43 +107,46 @@ def put_in_folder(listpdf, listyear):
 
         pdfcounter += 1
 
-def put_rest_pdf_to_folder(listpdf):
-    listyear = []
+
+def put_rest_pdf_to_folder(pdf_list):
+    year_list = []
     pdfcounter = 0
     x = 0
 
-    while x < len(listpdf):
-        years = listpdf[x][-14:-10]
-        listyear.append(years)
+    while x < len(pdf_list):
+        years = pdf_list[x][-14:-10]
+        year_list.append(years)
         x += 1
 
     pdfcounter = 0
-    while pdfcounter < len(listpdf):
-        for listYearItem in listyear:
-            if listYearItem in listpdf[pdfcounter]:
-                Path(listYearItem).mkdir(parents=True, exist_ok=True)
-                shutil.move(listpdf[pdfcounter], listYearItem)
+    while pdfcounter < len(pdf_list):
+        for year_listItem in year_list:
+            if year_listItem in pdf_list[pdfcounter]:
+                Path(year_listItem).mkdir(parents=True, exist_ok=True)
+                shutil.move(pdf_list[pdfcounter], year_listItem)
                 pdfcounter += 1
 
             else:
-                sys.exit("Error message")
+                sys.exit("Error°")
 
         pdfcounter += 1
 
-#=== Main ===
+# === Main ===
 
-listofpdf = file_end_with_pdf("","pdf")
-set_create_date(listofpdf, jahressteuerbescheinigung)
-listofpdf = remove_with_no_Licensee(listofpdf, listignore)
-listyear = generate_pdf_years(listofpdf)
-listofyears = return_date(listofpdf, listofyears)
 
-dic_pdf = dict(zip(listofpdf, listofyears))
+pdf_item_list = file_end_with_pdf("", "pdf")
+comdirect_tags_macos(pdf_item_list)
+set_create_date(pdf_item_list, annual_tax_certificate)
+pdf_item_list = remove_with_no_Licensee(pdf_item_list, ignore_list)
+year_list = generate_pdf_years(pdf_item_list)
+date_list = return_date(pdf_item_list, date_list)
+
+dic_pdf = dict(zip(pdf_item_list, date_list))
 dic_pdf = dict(sorted(dic_pdf.items(), key=lambda item: item[1]))
-listpdf = list(dic_pdf.keys())
-listyear = list(dic_pdf.values())
-put_in_folder(listpdf, listyear)
-listofpdf = file_end_with_pdf("","pdf")
-put_rest_pdf_to_folder(listofpdf)
+pdf_list = list(dic_pdf.keys())
+year_list = list(dic_pdf.values())
+put_in_folder(pdf_list, year_list)
+pdf_item_list = file_end_with_pdf("", "pdf")
+put_rest_pdf_to_folder(pdf_item_list)
 
 print("Done!")
